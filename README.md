@@ -18,7 +18,7 @@ To that end, there are multiple versions of the source files.
 The directory structure looks like
 
     ┃
-    ┣━split-versions.sh
+    ┣━split-versions.py
     ┃
     ┗━src/
       ┃
@@ -31,14 +31,16 @@ The directory structure looks like
       ┗━v3/
 
 Do not edit code under the version directories manually.
-The version directories, `v1/` etc. are regenerated from `merged` by `./split-versions.sh`.
-It uses the C preprocessor so you need to have `mcpp` on your PATH.
+The version directories, `v1/` etc. are regenerated from `merged` by `./split-versions.py`.
 
 ## What split-versions does
 
 For each file under merged that ends with `.ppme` (pre-process me),
-the `./split-versions.sh` script runs it through the C preprocessor
-once for each version, putting the output under the appropriate `v`{number} directory.
+the `./split-versions.sh` script runs it through a pass that recognizes C-preprocessor
+style `#if`/`#elif`/`#endif` directives.
+It does this once for each version, putting the output under the appropriate `v`{number} directory.
+
+It's roughly equivalent to the below.
 
 ```sh
 mcpp -e utf8 -D SDK_VERSION=1 src/merged/<path>.ppme src/v1/<path>.ppme
@@ -62,20 +64,7 @@ You can also use range checks.
 #endif
 ```
 
-Python uses `#` for comments, so it can be hard to use the C preprocessor with Python.
-`./split-versions.sh` runs *mcpp* with a *PYCOMMENT* macro which you can use thus:
-
-```c
-# PYCOMMENT(Hello, World!)
-```
-
-That preprocesses to:
-
-```py
-# Hello, World!
-```
-
-If a file, after pre-processing is empty, it is deleted and `./split-versions.sh` removes
+If a file, after pre-processing is empty, it is deleted and `./split-versions.py` removes
 it from that versions file tree.  It also runs `git rm -f` on any empty files so that
 committing newly empty version files will recognize the change.
 

@@ -1,0 +1,117 @@
+# Weather SDK
+
+A software development kit (SDK) for a simple weather information service.
+
+The weather service has a single operation that accepts a *WeatherRequest*
+and responds with a *WeatherResponse*.
+
+## Requests
+
+*WeatherRequest* bundles up request information.
+It is passable by copy across the network due to `@json` interop.
+
+#if SDK_VERSION == 3
+
+    @json
+    export sealed WeatherRequest {
+
+Location is a zipcode that lets the requester specify for where they want weather info.
+
+      location: String;
+
+Locale encapsulates the end user's preferences.
+
+      locale: Locale;
+    }
+
+    @json
+    @jsonExtra("version", 1)
+    export class OldWeatherRequest(
+      public location: String,
+
+For old style requests, we need to know the end user\'s locale so that
+we can bundle up display information.
+
+      public locale: Locale,
+    ) extends WeatherRequest {}
+
+    @json
+    @jsonExtra("version", 2)
+    export class NewWeatherRequest(
+      public location: String,
+      public locale: Locale,
+    ) extends WeatherRequest {}
+
+#else
+
+    @json
+#if SDK_VERSION == 1
+    @jsonExtra("version", 1)
+#else
+    @jsonExtra("version", 2)
+#endif
+    export class WeatherRequest(
+
+Location is a zipcode that lets the requester specify for where they want weather info.
+
+      public location: String,
+
+Locale encapsulates the end user's preferences.
+
+      public locale: Locale,
+
+    ) {}
+
+#endif
+
+
+## Responses
+
+*WeatherResponse* includes the temperature at the request location and time
+and provides access to display info.
+
+    @json
+    export class WeatherResponse(
+
+*degCPrecise* is the current temperature in degrees Celsius.
+It has enough significant digits to convert to degrees Fahrenheit.
+Clients should use the less precise *degC* for presentation which is rounded or
+do their own rounding to avoid number formatting like "71.299999999!"
+
+      public degCPrecise: Float64,
+
+*Cloudy* is `true` when there is significant cloud cover.
+
+      public cloudy: Boolean,
+
+*Locale* is the locale from the request.
+
+      public locale: Locale,
+
+#if SDK_VERSION == 1
+
+      @jsonName("displayInfo")
+      private _displayInfo: DisplayInfo,
+
+#elif SDK_VERSION == 3
+Responses to old-style requests can explicitly include display info.
+
+      private _displayInfo: DisplayInfo | Null,
+#endif
+
+    ) {
+
+*DisplayInfo* captures how to display to the end user.
+
+      public get displayInfo(): DisplayInfo {
+#if SDK_VERSION == 1
+        _displayInfo
+#else
+#if SDK_VERSION == 3
+        let bundled = _displayInfo;
+        if (bundled != null) { return bundled }
+#endif
+        DisplayInfo.from(degCPrecise, cloudy, locale)
+#endif
+      }
+    }

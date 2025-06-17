@@ -1,0 +1,138 @@
+## Displaying weather to end users
+
+*DisplayInfo* bundles information that comes in handy to end users.
+
+#if SDK_VERSION != 2
+    @json
+#endif
+    class DisplayInfo(
+
+*degCPrecise* is the current temperature in degrees Celsius.
+It has enough significant digits to convert to degrees Fahrenheit.
+Clients should use the less precise *degC* for presentation which is rounded or
+do their own rounding to avoid number formatting like "71.299999999!"
+
+      public degCPrecise: Float64,
+
+*degC* is a temperature in Celsius that's rounded so that it will display well in
+many contexts.
+
+      public degC: Float64,
+
+*degF* is a temperature in Celsius that's rounded so that it will display well in
+many contexts.
+
+      public degF: Float64,
+
+*TemperatureString* is a displayable form of the numeric temperature in the user's preferred locale using the scale and units they prefer.
+
+      public temperatureString: String,
+
+*Cloudy* is `true` when there is significant cloud cover.
+
+      public cloudy: Boolean,
+
+*WeatherIcon* is an emoji representation of the predominant weather feature.
+For example, snowflake or hot sun, or regular sun, or clouds.
+
+      public weatherIcon: String,
+
+*DressIcon* is an emoji that represents suggested dress style.
+It could be shorts or umbrella or a coat.  It takes into account the user's
+preference.  50 degrees Fahrenheit might be shorts-weather to a Michigander
+but not to a Floridian.
+
+      public dressIcon: String,
+
+    ) {
+
+*From* produces display info for the given weather conditions customized
+to user's in the given locale.
+
+      public static from(
+        degCPrecise: Float64,
+        cloudy: Boolean,
+        locale: Locale,
+      ) {
+        // Round degC to the closest quarter degree
+        // to avoid any kind of ".99999999" suffix problems when
+        // converting to a string.
+        let degC = (degCPrecise * 4.0).round() / 4.0;
+        // For Fahrenheit, we convert precisely and then round.
+        let degF = (((degCPrecise * 1.8) + 32.0) * 4.0).round() / 4.0;
+        let useFahrenheit = when (locale.country) {
+          "us", "US", // USA
+          "pw", "PW", // Palau
+          "fm", "FM", // Micronesia
+          "mh", "MH", // Marshall Islands
+          "lr", "LR"  // Liberia
+            -> true;
+          else -> false;
+        }
+        let temperatureString = if (useFahrenheit) {
+          // TODO: ingest ISO data files
+          "${degF.toString(10)}°F"
+        } else {
+          "${degC.toString(10)}°C"
+        };
+        let weatherIcon = if (degCPrecise <= 0.0) {
+          "❄️"
+        } else if (degCPrecise >= 25.0) {
+          "🥵"
+        } else if (cloudy) {
+          "☁️"
+        } else {
+          "☀️"
+        };
+
+        var coldWeatherLimit = 15.0;
+        var hotWeatherLimit = 24.0;
+        when (locale.country) {
+          // Lower limits for Icelanders
+          "is", "IS" -> do {
+            coldWeatherLimit -= 5.0;
+            hotWeatherLimit -= 5.0;
+          }
+
+          // Raise them for Burkina Faso
+          "bf", "BF' -> do {
+            coldWeatherLimit += 5.0;
+            hotWeatherLimit += 5.0;
+          }
+
+          "us", "US" -> when (locale.variant) {
+            // Lower limits for Northern US states.
+            "ak", "AK", "nd", "ND", "mn", "MN", "mi",
+            "MI", "me", "ME", "wy", "WY" -> do {
+              coldWeatherLimit -= 5.0;
+              hotWeatherLimit -= 5.0;
+            }
+            // Raise them for Floridians and Texans.
+            "fl", "FL", "tx", "TX", "la", "LA" -> do {
+              coldWeatherLimit += 5.0;
+              hotWeatherLimit += 5.0;
+            }
+          }
+        }
+        let dressIcon = if (degCPrecise <= coldWeatherLimit) {
+          "🧤"
+        } else if (degCPrecise >= hotWeatherLimit) {
+          "🩳"
+        } else if (cloudy) {
+          "☂️"
+        } else {
+          "🧥"
+        };
+
+        return {
+          degCPrecise,
+          degC,
+          degF,
+          temperatureString,
+          cloudy,
+          weatherIcon,
+          dressIcon,
+        }
+      }
+    }
+
