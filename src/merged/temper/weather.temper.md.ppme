@@ -13,7 +13,7 @@ It is passable by copy across the network due to `@json` interop.
 #if SDK_VERSION == 3
 
     @json
-    export sealed WeatherRequest {
+    export sealed interface WeatherRequest {
 
 Location is a zipcode that lets the requester specify for where they want weather info.
 

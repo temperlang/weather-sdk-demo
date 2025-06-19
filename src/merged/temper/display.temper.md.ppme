@@ -5,7 +5,7 @@
 #if SDK_VERSION != 2
     @json
 #endif
-    class DisplayInfo(
+    export class DisplayInfo(
 
 *degCPrecise* is the current temperature in degrees Celsius.
 It has enough significant digits to convert to degrees Fahrenheit.
@@ -53,13 +53,13 @@ to user's in the given locale.
         degCPrecise: Float64,
         cloudy: Boolean,
         locale: Locale,
-      ) {
+      ): DisplayInfo {
         // Round degC to the closest quarter degree
         // to avoid any kind of ".99999999" suffix problems when
         // converting to a string.
-        let degC = (degCPrecise * 4.0).round() / 4.0;
+        let degC = (degCPrecise * 4.0).round() * 0.25;
         // For Fahrenheit, we convert precisely and then round.
-        let degF = (((degCPrecise * 1.8) + 32.0) * 4.0).round() / 4.0;
+        let degF = (((degCPrecise * 1.8) + 32.0) * 4.0).round() * 0.25;
         let useFahrenheit = when (locale.country) {
           "us", "US", // USA
           "pw", "PW", // Palau
@@ -71,9 +71,9 @@ to user's in the given locale.
         }
         let temperatureString = if (useFahrenheit) {
           // TODO: ingest ISO data files
-          "${degF.toString(10)}°F"
+          "${degF.toString()}°F"
         } else {
-          "${degC.toString(10)}°C"
+          "${degC.toString()}°C"
         };
         let weatherIcon = if (degCPrecise <= 0.0) {
           "❄️"
@@ -95,7 +95,7 @@ to user's in the given locale.
           }
 
           // Raise them for Burkina Faso
-          "bf", "BF' -> do {
+          "bf", "BF" -> do {
             coldWeatherLimit += 5.0;
             hotWeatherLimit += 5.0;
           }
@@ -124,7 +124,7 @@ to user's in the given locale.
           "🧥"
         };
 
-        return {
+        ({
           degCPrecise,
           degC,
           degF,
@@ -132,7 +132,7 @@ to user's in the given locale.
           cloudy,
           weatherIcon,
           dressIcon,
-        }
+        })
       }
     }
 

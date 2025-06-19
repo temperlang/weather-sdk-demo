@@ -18,8 +18,8 @@ A locale bundles up information about how to display preferences.
       }
 
 
-*fromBcp47String* takes a [BCP 47 string](https://en.wikipedia.org/wiki/IETF_language_tag) and
-returns a locale.
+*fromBcp47String* takes a [BCP 47 string](https://en.wikipedia.org/wiki/IETF_language_tag)
+and returns a locale.
 It's tolerant to differences between '-' and '_' as delimiters.
 If there are two delimiters, the variant will be non null.
 
@@ -73,17 +73,17 @@ If there are two delimiters, the variant will be non null.
 Here are some tests for Locale parsing and stringification.
 
     test("parsing and unparsing locales") {
-      let enUs = Locale.fromIsoString("en-US");
+      let enUs = Locale.fromBcp47String("en-US");
       assert(enUs.language == "en");
       assert(enUs.country == "US");
-      assert(enUs.variant == null);
+      assert(enUs.variant.is<Null>());
       assert(enUs.toString() == "en-US");
 
-      let enUs = Locale.fromIsoString("nan_Hant_TW");
-      assert(enUs.language == "nan");
-      assert(enUs.country == "Hant");
-      assert(enUs.variant == "Tw");
-      assert(enUs.toString() == "nan-Hant-Tw");
+      let nanTw = Locale.fromBcp47String("nan_Hant_TW");
+      assert(nanTw.language == "nan");
+      assert(nanTw.country == "Hant");
+      assert((nanTw.variant ?? "?") == "Tw");
+      assert(nanTw.toString() == "nan-Hant-Tw");
     }
 
 For JSON interop:
@@ -93,4 +93,4 @@ For JSON interop:
       JsonProducer,
       JsonString,
       JsonSyntaxTree
-    } = import("../json");
+    } = import("std/json");

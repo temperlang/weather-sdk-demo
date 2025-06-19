@@ -1,0 +1,82 @@
+# Weather SDK
+
+The SDK sends requests and gets responses.
+
+It needs to create and parse JSON.
+
+    let {
+      JsonTextProducer, NullInterchangeContext, parseJson
+    } = import("std/json");
+
+It also needs to send network messages.
+
+    let { NetRequest, NetResponse } = import("std/net");
+
+Normally, our weather service would live somewhere, but since this is a demo
+we just have a convention for ports.
+
+#if SDK_VERSION == 1
+    let defaultWeatherHostPort = "http://localhost:10001";
+#elif SDK_VERSION == 2
+    let defaultWeatherHostPort = "http://localhost:10002";
+#else
+    let defaultWeatherHostPort = "http://localhost:10003";
+#endif
+
+*GetWeather* sends a request to the weather service and returns a response.
+Since it's a network API, it returns a promise for the response.
+
+    let getWeather(
+
+location should be a zipcode.
+
+      location: String,
+
+locale controls how results are explained to the end user.
+
+      locale: Locale,
+
+weatherServiceHost controls where the message is sent.
+For local testing, you can override it to point to a port on
+localhost.
+
+      weatherServiceHost: String = defaultWeatherHostPort,
+    ): Promise<WeatherResponse> {
+      // Craft a request object
+#if SDK_VERSION == 3
+      let request = new NewWeatherRequest(location, locale);
+#else
+      let request = new WeatherRequest(location, locale);
+#endif
+
+      // Encode it as JSON
+      let messageBody = new JsonTextProducer();
+      WeatherRequest.jsonAdapter().encodeToJson(request, messageBody);
+
+      // Send a network message with the JSON body
+      let netRequest = new NetRequest("${weatherServiceHost}/weather");
+      netRequest.post(messageBody.toJsonString() orelse panic(), "application/json");
+      let netPromise = netRequest.send();
+
+      // We need an output response that'll be filled asynchronously.
+      let response = new PromiseBuilder<WeatherResponse>();
+
+      async { (): GeneratorResult<Null> extends GeneratorFn;;
+        do {
+          // Get the HTTP body and unpack it to a JSON tree.
+          // Then decode that to the output promise.
+          let netResponse = await netPromise;
+          if (netResponse.status == 200) {
+            let weather = WeatherResponse.jsonAdapter().decodeFromJson(
+              parseJson((await netResponse.bodyContent).as<String>()),
+              NullInterchangeContext.instance
+            );
+            response.complete(weather);
+          } else {
+            response.breakPromise();
+          }
+        } orelse response.breakPromise();
+      }
+
+      response.promise
+    }
