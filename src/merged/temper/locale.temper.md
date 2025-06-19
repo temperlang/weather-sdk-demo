@@ -11,9 +11,9 @@ A locale bundles up information about how to display preferences.
       public toString(): String {
         let variant = this.variant;
         if (variant != null) {
-          "${language}-{country}-{variant}"
+          "${language}-${country}-${variant}"
         } else {
-          "${language}-{country}"
+          "${language}-${country}"
         }
       }
 
@@ -76,14 +76,14 @@ Here are some tests for Locale parsing and stringification.
       let enUs = Locale.fromBcp47String("en-US");
       assert(enUs.language == "en");
       assert(enUs.country == "US");
-      assert(enUs.variant.is<Null>());
+      assert((enUs.variant ?? "?") == "?");
       assert(enUs.toString() == "en-US");
 
       let nanTw = Locale.fromBcp47String("nan_Hant_TW");
       assert(nanTw.language == "nan");
       assert(nanTw.country == "Hant");
-      assert((nanTw.variant ?? "?") == "Tw");
-      assert(nanTw.toString() == "nan-Hant-Tw");
+      assert((nanTw.variant ?? "?") == "TW");
+      assert(nanTw.toString() == "nan-Hant-TW");
     }
 
 For JSON interop:
