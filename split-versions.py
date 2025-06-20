@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import os.path
 import pathlib
 import shutil
@@ -129,17 +130,37 @@ def process_one_file(f):
     if not had_ext:
         # Just copy it into each version output directory
         for (_, out_file) in out_files:
-            shutil.copy(f, out_file)
+            if files_differ(f, out_file):
+                print(f'update {out_file}')
+                shutil.copy(f, out_file)
     else:
         # f ends with .ppme so preprocess it into each version output directory
         for (v, out_file) in out_files:
             env = {
                 'SDK_VERSION': v
             }
-            preprocess(f, out_file, env = env)
+            out_file_tilde = f'{out_file}~'
+            preprocess(f, out_file_tilde, env = env)
+            if files_differ(out_file_tilde, out_file):
+                shutil.move(out_file_tilde, out_file)
+                print(f'update {out_file}')
+            else:
+                # Don't clobber mtime since that causes `make` to do too much work
+                os.unlink(out_file_tilde)
             if os.path.getsize(out_file) == 0:
                 # Make sure empty files get recognized as deleted
                 subprocess.run(['git', 'rm', '-f', out_file], check = true)
+
+def files_differ(a: str, b: str) -> bool:
+    if not os.path.exists(a):
+        return not os.path.exists(b)
+    elif not os.path.exists(b):
+        return True
+    if os.path.getsize(a) != os.path.getsize(b):
+        return True
+    with open(a, 'rb') as a_fp:
+        with open(b, 'rb') as b_fp:
+            return a_fp.read() != b_fp.read()
 
 if __name__ == '__main__':
     for f in pathlib.Path(os.path.join(PROJECT_DIR, 'src', 'merged')).rglob('**/*'):

@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+
+"""
+Serve the weather.
+"""
+
+#if SDK_VERSION == 1
+DEFAULT_PORT=10001
+#elif SDK_VERSION == 2
+DEFAULT_PORT=10002
+#elif SDK_VERSION == 3
+DEFAULT_PORT=10003
+#endif
+
+from weather_sdk import WeatherRequest, Locale, WeatherResponse, DisplayInfo
+#if SDK_VERSION == 3
+from weather_sdk import NewWeatherRequest, OldWeatherRequest
+#endif
+import weather_sdk
+from json import JsonTextProducer, parse_json
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+from urllib.parse import urlparse, parse_qs
+import urllib.parse
+import urllib.request
+
+import traceback
+
+class WeatherHandler(BaseHTTPRequestHandler):
+  def do_GET(self):
+    parsed_path = urlparse(self.path)
+    if parsed_path.path == '/weather':
+      try:
+        query_params = parse_qs(parsed_path.query)
+
+        (location,) = query_params['location']
+        (locale,) = query_params.get('locale', ['en_US'])
+        locale = Locale.from_bcp47_string(locale)
+
+#if SDK_VERSION < 3
+        weather_request = WeatherRequest(location, locale)
+#else
+        (req_version,) = query_params.get('v', ['2'])
+
+        if int(req_version) == 1:
+          weather_request = OldWeatherRequest(location, locale)
+        else:
+          weather_request = NewWeatherRequest(location, locale)
+#endif
+        weather_response = process_weather_request(weather_request)
+        self.respond(weather_response)
+
+      except Exception as e:
+        self.send_error(500, f"Server error: {str(e)}\n{traceback.format_exc()}")
+    else:
+      self.send_error(404, "Path not found")
+
+  def do_POST(self):
+    parsed_path = urlparse(self.path)
+    if parsed_path.path == '/weather':
+      try:
+        content_length = int(self.headers.get('Content-Length', 0))
+        post_data = self.rfile.read(content_length)
+        weather_request = WeatherRequest.json_adapter() \
+          .decode_from_json(parse_json(post_data.decode('utf-8')))
+        weather_response = process_weather_request(weather_request)
+        self.respond(weather_response)
+
+      except Exception as e:
+        e.print_stack()
+        self.send_error(500, f"Server error: {str(e)}")
+    else:
+      self.send_error(404, "Path not found")
+
+  def respond(self, weather_response: WeatherResponse):
+    json_out = JsonTextProducer()
+    WeatherResponse.json_adapter().encode_to_json(weather_response, json_out)
+
+    self.send_response(200)
+    self.send_header('Content-type', 'application/json')
+    self.end_headers()
+    self.wfile.write(json_out.to_json_string().encode('utf-8'))
+
+_CANNED_RESPONSE = '{"coord":{"lon":-74.6408,"lat":40.3666},"weather":[{"id":801,"main":"Clouds","description":"few clouds","icon":"02n"}],"base":"stations","main":{"temp":292.33,"feels_like":292.44,"temp_min":291.3,"temp_max":293.68,"pressure":1010,"humidity":82,"sea_level":1010,"grnd_level":1006},"visibility":10000,"wind":{"speed":3.6,"deg":290},"clouds":{"all":20},"dt":1750405788,"sys":{"type":2,"id":2085995,"country":"US","sunrise":1750411712,"sunset":1750465908},"timezone":-14400,"id":0,"name":"Princeton","cod":200}'
+
+def process_weather_request(weather_request: WeatherRequest) -> WeatherResponse:
+  location = weather_request.location
+  locale = weather_request.locale
+
+  if location == '08540':
+    # Make sure we have something that works in the demo even if the other
+    # service stops working
+    json_text = _CANNED_RESPONSE
+  else:
+    # Call out to the real weather service
+    appid = 'c51ce4d440fba05a3b8a4ededa81e63a'
+    url = f'https://api.openweathermap.org/data/2.5/weather?zip={urllib.parse.quote_plus(location)}&appid={appid}'
+    request = urllib.request.Request(url, method = 'GET')
+    with urllib.request.urlopen(request) as response:
+      json_text = response.read().decode('utf-8')
+
+  json_ast = parse_json(json_text)
+  # Look for main.temp which is a floating point number in Kelvin
+  main = json_ast.property_value_or_bubble('main')
+  main_temp_kelvin = main.property_value_or_bubble('temp').as_float64()
+  temp_celsius = main_temp_kelvin - 273.15
+  # Look for main.humidity which is a percentage which we'll use to
+  # decide cloudiness.
+  main_humidity = main.property_value_or_bubble('humidity').as_float64()
+  is_cloudy = main_humidity >= 0.8
+
+#if SDK_VERSION == 1
+  weather_response = WeatherResponse(
+    temp_celsius,
+    is_cloudy,
+    locale,
+    DisplayInfo.from_(temp_celsius, is_cloudy, locale)
+  )
+#elif SDK_VERSION == 2
+  weather_response = WeatherResponse(
+    temp_celsius,
+    is_cloudy,
+    locale,
+  )
+#elif SDK_VERSION == 3
+  if isinstance(weather_request, weather_sdk.NewWeatherRequest):
+    weather_response = WeatherResponse(
+      temp_celsius,
+      is_cloudy,
+      locale,
+      None,
+    )
+  else:
+    weather_response = WeatherResponse(
+      temp_celsius,
+      is_cloudy,
+      locale,
+      DisplayInfo.from_(temp_celsius, is_cloudy, locale),
+    )
+#endif
+
+  return weather_response
+
+def serve(port: int = DEFAULT_PORT):
+  httpd = HTTPServer(('', port), WeatherHandler)
+  print(f"Weather endpoint available at: http://localhost:{port}/weather")
+  try:
+    httpd.serve_forever()
+  except KeyboardInterrupt:
+    print("\nShutting down server...")
+    httpd.shutdown()
+
+if __name__ == '__main__':
+  serve()
