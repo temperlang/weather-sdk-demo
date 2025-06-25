@@ -17,7 +17,7 @@ from weather_sdk import WeatherRequest, Locale, WeatherResponse, DisplayInfo
 from weather_sdk import NewWeatherRequest, OldWeatherRequest
 #endif
 import weather_sdk
-from json import JsonTextProducer, parse_json
+from json import JsonTextProducer, parse_json, NullInterchangeContext
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 from urllib.parse import urlparse, parse_qs
@@ -62,13 +62,13 @@ class WeatherHandler(BaseHTTPRequestHandler):
         content_length = int(self.headers.get('Content-Length', 0))
         post_data = self.rfile.read(content_length)
         weather_request = WeatherRequest.json_adapter() \
-          .decode_from_json(parse_json(post_data.decode('utf-8')))
+          .decode_from_json(parse_json(post_data.decode('utf-8')),
+                            NullInterchangeContext.instance)
         weather_response = process_weather_request(weather_request)
         self.respond(weather_response)
 
       except Exception as e:
-        e.print_stack()
-        self.send_error(500, f"Server error: {str(e)}")
+        self.send_error(500, f"Server error: {str(e)}\n{traceback.format_exc()}")
     else:
       self.send_error(404, "Path not found")
 

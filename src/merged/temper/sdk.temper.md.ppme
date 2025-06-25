@@ -26,7 +26,7 @@ we just have a convention for ports.
 *GetWeather* sends a request to the weather service and returns a response.
 Since it's a network API, it returns a promise for the response.
 
-    let getWeather(
+    export let getWeather(
 
 location should be a zipcode.
 
@@ -55,7 +55,9 @@ localhost.
 
       // Send a network message with the JSON body
       let netRequest = new NetRequest("${weatherServiceHost}/weather");
-      netRequest.post(messageBody.toJsonString() orelse panic(), "application/json");
+      let requestJson = messageBody.toJsonString() orelse panic();
+      console.log("Sending `${requestJson}`.");
+      netRequest.post(requestJson, "application/json");
       let netPromise = netRequest.send();
 
       // We need an output response that'll be filled asynchronously.
@@ -67,8 +69,10 @@ localhost.
           // Then decode that to the output promise.
           let netResponse = await netPromise;
           if (netResponse.status == 200) {
+            let responseJson = (await netResponse.bodyContent).as<String>();
+            console.log("Received `${responseJson}`.");
             let weather = WeatherResponse.jsonAdapter().decodeFromJson(
-              parseJson((await netResponse.bodyContent).as<String>()),
+              parseJson(responseJson),
               NullInterchangeContext.instance
             );
             response.complete(weather);

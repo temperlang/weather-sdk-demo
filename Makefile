@@ -5,6 +5,10 @@ help:
 
 build-all: v1 v2 v3
 
+clean:
+	rm .split.tstamp
+	rm -rf src/v{1,2,3}
+
 v1: split src/v1/tstamp
 v2: split src/v2/tstamp
 v3: split src/v3/tstamp
