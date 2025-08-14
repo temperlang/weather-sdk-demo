@@ -96,7 +96,8 @@ do their own rounding to avoid number formatting like "71.299999999!"
 #elif SDK_VERSION == 3
 Responses to old-style requests can explicitly include display info.
 
-      private _displayInfo: DisplayInfo | Null,
+      @jsonName("displayInfo")
+      private _displayInfo: DisplayInfo?,
 #endif
 
     ) {

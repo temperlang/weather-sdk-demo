@@ -3,7 +3,7 @@ help:
 	@echo '`make build-all` builds all the Temper translations'
 	@echo '`make serve-v1` starts the v1 server.'
 
-build-all: v1 v2 v3
+build-all: split v1 v2 v3
 
 clean:
 	rm .split.tstamp
@@ -35,10 +35,13 @@ src/v3/tstamp: src/v3/temper/*.temper.md
 	touch src/v3/tstamp
 
 serve-v1: v1
-	PYTHONPATH="src/v1/temper.out/py/std:src/v1/temper.out/py/std/temper_std:src/v1/temper.out/py/temper-core/temper_core:src/v1/temper.out/py/weather-sdk/weather_sdk:$$PYTHONPATH" python3 src/v1/py/serve.py
+	PYTHONPATH="src/v1/temper.out/py/std:src/v1/temper.out/py/std/temper_std:src/v1/temper.out/py/temper-core:src/v1/temper.out/py/weather-sdk/weather_sdk:$$PYTHONPATH" python3 src/v1/py/serve.py
 
 serve-v2: v2
-	PYTHONPATH="src/v2/temper.out/py/std:src/v2/temper.out/py/std/temper_std:src/v2/temper.out/py/temper-core/temper_core:src/v2/temper.out/py/weather-sdk/weather_sdk:$$PYTHONPATH" python3 src/v2/py/serve.py
+	PYTHONPATH="src/v2/temper.out/py/std:src/v2/temper.out/py/std/temper_std:src/v2/temper.out/py/temper-core:src/v2/temper.out/py/weather-sdk/weather_sdk:$$PYTHONPATH" python3 src/v2/py/serve.py
 
 serve-v3: v3
-	PYTHONPATH="src/v3/temper.out/py/std:src/v3/temper.out/py/std/temper_std:src/v3/temper.out/py/temper-core/temper_core:src/v3/temper.out/py/weather-sdk/weather_sdk:$$PYTHONPATH" python3 src/v3/py/serve.py
+	PYTHONPATH="src/v3/temper.out/py/std:src/v3/temper.out/py/std/temper_std:src/v3/temper.out/py/temper-core:src/v3/temper.out/py/weather-sdk/weather_sdk:$$PYTHONPATH" python3 src/v3/py/serve.py
+
+py-v2-repl: v2
+	PYTHONPATH="src/v2/temper.out/py/std:src/v2/temper.out/py/std/temper_std:src/v2/temper.out/py/temper-core:src/v2/temper.out/py/weather-sdk/weather_sdk:$$PYTHONPATH" python3

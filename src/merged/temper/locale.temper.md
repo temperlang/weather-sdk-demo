@@ -6,7 +6,7 @@ A locale bundles up information about how to display preferences.
     export class Locale(
       public language: String,
       public country: String,
-      public variant: String | Null,
+      public variant: String?,
     ) {
       public toString(): String {
         let variant = this.variant;
